@@ -1,0 +1,13 @@
+<div class="modal" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <form (ngSubmit)="addUser()">
+      <label for="name">Name:</label>
+      <input id="name" [(ngModel)]="newUser.name" name="name" required>
+
+      <label for="timezone">Timezone:</label>
+      <input id="timezone" [(ngModel)]="newUser.timezone" name="timezone" required>
+
+      <button type="submit">Add User</button>
+    </form>
+  </div>
+</div>

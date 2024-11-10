@@ -1,0 +1,21 @@
+<form (ngSubmit)="addAvailability()">
+  <label for="day">Day of the Week:</label>
+  <select id="day" [(ngModel)]="newAvailability.day" name="day" required>
+    <option value="" disabled>Select a day</option>
+    <option value="Monday">Monday</option>
+    <option value="Tuesday">Tuesday</option>
+    <option value="Wednesday">Wednesday</option>
+    <option value="Thursday">Thursday</option>
+    <option value="Friday">Friday</option>
+    <option value="Saturday">Saturday</option>
+    <option value="Sunday">Sunday</option>
+  </select>
+
+  <label for="start">Start Time:</label>
+  <input id="start" type="time" [(ngModel)]="newAvailability.start" name="start" required>
+
+  <label for="end">End Time:</label>
+  <input id="end" type="time" [(ngModel)]="newAvailability.end" name="end" required>
+
+  <button type="submit">Add Availability</button>
+</form>

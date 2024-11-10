@@ -1,0 +1,27 @@
+<div class="main-container">
+  <div class="sidebar">
+    <h2>Users</h2>
+    <ul>
+      <li *ngFor="let user of users">
+        <a [routerLink]="['/user-page', user.id]">{{ user.name }} ({{ user.timeZone }})</a>
+      </li>
+    </ul>
+    <button (click)="openAddUserForm()">Add New User</button>
+    <div id="add-user-form" style="display: none;">
+      <add-user-form></add-user-form>
+      <button (click)="closeAddUserForm()">Close</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <h2>Optimal Meeting Hours</h2>
+    <p>{{ optimalMeetingHours }}</p>
+
+    <div>
+      <label for="timezone">Select Time Zone: </label>
+      <select id="timezone" [(ngModel)]="selectedTimeZone">
+        <option *ngFor="let zone of timezones" [value]="zone">{{ zone }}</option>
+      </select>
+    </div>
+  </div>
+</div>

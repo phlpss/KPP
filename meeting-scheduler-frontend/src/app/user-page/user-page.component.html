@@ -1,0 +1,18 @@
+<div class="user-page">
+  <h2>{{ user.name }}'s Availability</h2>
+
+  <button (click)="openAddAvailabilityForm()">Add Available Hours</button>
+
+  <ul>
+    <li *ngFor="let availability of user.availabilities">
+      {{ availability.day }}: {{ availability.start }} - {{ availability.end }}
+      <button (click)="deleteAvailability(availability.id)">Delete</button>
+    </li>
+  </ul>
+
+  <button (click)="changeTimeZone()">Change Time Zone</button>
+  <p>Current Time Zone: {{ user.timezone }}</p>
+
+  <!-- Add a "Go Back" button -->
+  <button (click)="goBack()">Go Back to Home</button>
+</div>
