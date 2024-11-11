@@ -8,93 +8,80 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class AvailabilityProcessor {
-
     public static Map<DayOfWeek, List<LocalTime>> findAvailableMeetingSlots(List<AvailabilityEntity> availabilities, int durationHours) {
-        if (availabilities.isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        Map<DayOfWeek, List<LocalTime>> weeklyAvailableSlots = new HashMap<>();
-
-        for (DayOfWeek day : DayOfWeek.values()) {
-            List<AvailabilityEntity> dailyAvailabilities = availabilities.stream()
-                    .filter(a -> a.getDayOfWeek().equals(day))
-                    .toList();
-
-            if (dailyAvailabilities.isEmpty()) {
-                continue;
-            }
-
-            // Group by user to ensure each user is considered separately
-            Map<UserEntity, List<TimeInterval>> userIntervals = dailyAvailabilities.stream()
-                    .collect(Collectors.groupingBy(
-                            AvailabilityEntity::getUser,
-                            Collectors.mapping(
-                                    a -> new TimeInterval(
-                                            toUTC(a.getStartTime(), a.getUser().getTimeZone()),
-                                            toUTC(a.getEndTime(), a.getUser().getTimeZone())),
-                                    Collectors.toList())));
-
-            List<TimeInterval> commonIntervals = findCommonIntervals(userIntervals, durationHours);
-            List<TimeInterval> dividedIntervals = divideIntervalsByDuration(commonIntervals, durationHours);
-
-            List<LocalTime> availableSlots = dividedIntervals.stream()
-                    .map(TimeInterval::start)
-                    .distinct()
-                    .collect(Collectors.toList());
-
-            weeklyAvailableSlots.put(day, availableSlots);
-        }
-        return weeklyAvailableSlots;
+        return processAvailability(availabilities, durationHours, false);
     }
 
     public static Map<DayOfWeek, Map.Entry<LocalTime, Integer>> findGreatestMeetingSlot(List<AvailabilityEntity> availabilities, int minDurationHours) {
+        return processAvailability(availabilities, minDurationHours, true);
+    }
+
+    private static <T> Map<DayOfWeek, T> processAvailability(List<AvailabilityEntity> availabilities, int durationHours, boolean findGreatest) {
         if (availabilities.isEmpty()) {
             return Collections.emptyMap();
         }
 
-        Map<DayOfWeek, Map.Entry<LocalTime, Integer>> longestAvailableSlots = new HashMap<>();
-        LocalTime greatestSlotStart = null;
-        DayOfWeek greatestSlotDay = null;
-        int maxDuration = 0;
+        Map<DayOfWeek, T> result = new HashMap<>();
 
         for (DayOfWeek day : DayOfWeek.values()) {
-            List<AvailabilityEntity> dailyAvailabilities = availabilities.stream()
-                    .filter(a -> a.getDayOfWeek().equals(day))
-                    .toList();
+            List<AvailabilityEntity> dailyAvailabilities = filterDailyAvailabilities(availabilities, day);
+            if (dailyAvailabilities.isEmpty()) continue;
 
-            if (dailyAvailabilities.isEmpty()) {
-                continue;
+            Map<UserEntity, List<TimeInterval>> userIntervals = mapUserIntervals(dailyAvailabilities);
+
+            List<TimeInterval> commonIntervals = findCommonIntervals(userIntervals, durationHours);
+
+            if (findGreatest) {
+                findAndSetGreatestInterval(result, commonIntervals, day);
+            } else {
+                setAvailableSlots(result, commonIntervals, durationHours, day);
             }
+        }
+        return result;
+    }
 
-            Map<UserEntity, List<TimeInterval>> userIntervals = dailyAvailabilities.stream()
-                    .collect(Collectors.groupingBy(
-                            AvailabilityEntity::getUser,
-                            Collectors.mapping(
-                                    a -> new TimeInterval(
-                                            toUTC(a.getStartTime(), a.getUser().getTimeZone()),
-                                            toUTC(a.getEndTime(), a.getUser().getTimeZone())),
-                                    Collectors.toList())
-                    ));
+    private static List<AvailabilityEntity> filterDailyAvailabilities(List<AvailabilityEntity> availabilities, DayOfWeek day) {
+        return availabilities.stream()
+                .filter(a -> a.getDayOfWeek().equals(day))
+                .toList();
+    }
 
-            List<TimeInterval> commonIntervals = findCommonIntervals(userIntervals, minDurationHours);
+    private static Map<UserEntity, List<TimeInterval>> mapUserIntervals(List<AvailabilityEntity> dailyAvailabilities) {
+        return dailyAvailabilities.stream()
+                .collect(Collectors.groupingBy(
+                        AvailabilityEntity::getUser,
+                        Collectors.mapping(
+                                a -> new TimeInterval(
+                                        toUTC(a.getStartTime(), a.getUser().getTimeZone()),
+                                        toUTC(a.getEndTime(), a.getUser().getTimeZone())),
+                                Collectors.toList())));
+    }
 
-            // Find the longest interval in the common intervals for the day
-            for (TimeInterval interval : commonIntervals) {
-                int currentDuration = (int) Duration.between(interval.start(), interval.end()).toHours();
-                if (currentDuration > maxDuration) {
-                    maxDuration = currentDuration;
-                    greatestSlotStart = interval.start();
-                    greatestSlotDay = day;
-                }
+    private static <T> void findAndSetGreatestInterval(Map<DayOfWeek, T> result, List<TimeInterval> commonIntervals, DayOfWeek day) {
+        LocalTime greatestSlotStart = null;
+        int maxDuration = 0;
+
+        for (TimeInterval interval : commonIntervals) {
+            int currentDuration = (int) Duration.between(interval.start(), interval.end()).toHours();
+            if (currentDuration > maxDuration) {
+                maxDuration = currentDuration;
+                greatestSlotStart = interval.start();
             }
         }
 
-        if (greatestSlotDay != null && greatestSlotStart != null) {
-            longestAvailableSlots.put(greatestSlotDay, Map.entry(greatestSlotStart, maxDuration));
+        if (greatestSlotStart != null) {
+            result.put(day, (T) Map.entry(greatestSlotStart, maxDuration));
         }
+    }
 
-        return longestAvailableSlots;
+    private static <T> void setAvailableSlots(Map<DayOfWeek, T> result, List<TimeInterval> commonIntervals, int durationHours, DayOfWeek day) {
+        List<TimeInterval> dividedIntervals = divideIntervalsByDuration(commonIntervals, durationHours);
+        List<LocalTime> availableSlots = dividedIntervals.stream()
+                .map(TimeInterval::start)
+                .distinct()
+                .collect(Collectors.toList());
+
+        result.put(day, (T) availableSlots);
     }
 
     private static List<TimeInterval> findCommonIntervals(Map<UserEntity, List<TimeInterval>> userIntervals, int durationHours) {
