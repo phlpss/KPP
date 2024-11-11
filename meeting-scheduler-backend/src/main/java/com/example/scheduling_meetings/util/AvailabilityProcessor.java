@@ -132,7 +132,11 @@ public class AvailabilityProcessor {
             while (currentStart.plusHours(durationHours).isBefore(end) || currentStart.plusHours(durationHours).equals(end)) {
                 LocalTime currentEnd = currentStart.plusHours(durationHours);
                 dividedIntervals.add(new TimeInterval(currentStart, currentEnd));
-                currentStart = currentStart.plusHours(1);
+
+                var newStart = currentStart.plusHours(1);
+                // handle new day
+                if(newStart.isBefore(currentStart)) break;
+                currentStart = newStart;
             }
         }
         return dividedIntervals;

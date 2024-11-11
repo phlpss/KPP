@@ -1,7 +1,8 @@
-package com.example.scheduling_meetings.util;
+package com.example.scheduling_meetings;
 
 import com.example.scheduling_meetings.domain.model.AvailabilityEntity;
 import com.example.scheduling_meetings.domain.model.UserEntity;
+import com.example.scheduling_meetings.util.AvailabilityProcessor;
 import org.junit.jupiter.api.Test;
 
 import java.time.DayOfWeek;
@@ -280,5 +281,55 @@ class AvailabilityProcessorTest {
         Map<DayOfWeek, Map.Entry<LocalTime, Integer>> result = AvailabilityProcessor.findGreatestMeetingSlot(availabilities, 1);
 
         assertEquals(0, result.size(), "Expected empty result for no availabilities");
+    }
+
+    @Test
+    void testOverlappingAvailabilitiesWithTwoHourMaxOnTuesday() {
+        UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("Europe/London")).build();
+        UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("Europe/London")).build();
+
+        AvailabilityEntity availability1 = new AvailabilityEntity(1L, user1, TUESDAY, LocalTime.of(11, 0), LocalTime.of(15, 0));
+        AvailabilityEntity availability2 = new AvailabilityEntity(2L, user2, TUESDAY, LocalTime.of(12, 0), LocalTime.of(14, 0));
+
+        List<AvailabilityEntity> availabilities = Arrays.asList(availability1, availability2);
+        int durationHours = 2;
+
+        Map<DayOfWeek, List<LocalTime>> result = AvailabilityProcessor.findAvailableMeetingSlots(availabilities, durationHours);
+
+        assertEquals(1, result.size(), "Expected one available slot on Tuesday");
+        assertEquals(LocalTime.of(12, 0), result.get(TUESDAY).getFirst(), "Expected available slot at 12:00 on Tuesday");
+    }
+
+    @Test
+    void testNonConsecutiveHoursNoCommonSlotOnWednesday() {
+        UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("Europe/London")).build();
+        UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("Europe/London")).build();
+
+        AvailabilityEntity availability1 = new AvailabilityEntity(3L, user1, WEDNESDAY, LocalTime.of(11, 0), LocalTime.of(13, 0));
+        AvailabilityEntity availability2 = new AvailabilityEntity(4L, user2, WEDNESDAY, LocalTime.of(14, 0), LocalTime.of(16, 0));
+
+        List<AvailabilityEntity> availabilities = Arrays.asList(availability1, availability2);
+        int durationHours = 2;
+
+        Map<DayOfWeek, List<LocalTime>> result = AvailabilityProcessor.findAvailableMeetingSlots(availabilities, durationHours);
+
+        assertEquals(0, result.get(WEDNESDAY).size(), "Expected no common available slots on Wednesday due to non-consecutive hours");
+    }
+
+    @Test
+    void testDifferentTimeZonesWithOverlapInUTCOnTuesday() {
+        UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("Europe/London")).build();  // UTC
+        UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("Europe/Kyiv")).build();    // UTC+2
+
+        AvailabilityEntity availability1 = new AvailabilityEntity(1L, user1, TUESDAY, LocalTime.of(18, 0), LocalTime.of(23, 0));
+        AvailabilityEntity availability2 = new AvailabilityEntity(2L, user2, WEDNESDAY, LocalTime.of(0, 0), LocalTime.of(3, 0)); // 22:00 - 01:00
+
+        List<AvailabilityEntity> availabilities = Arrays.asList(availability1, availability2);
+        int durationHours = 2;
+
+        Map<DayOfWeek, List<LocalTime>> result = AvailabilityProcessor.findAvailableMeetingSlots(availabilities, durationHours);
+
+        assertEquals(1, result.get(TUESDAY).size(), "Expected one available slot due to time zone overlap");
+        assertEquals(LocalTime.of(22, 0), result.get(TUESDAY).getFirst(), "Expected available slot at 22:00 UTC on Tuesday");
     }
 }
