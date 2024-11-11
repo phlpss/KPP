@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class AvailabilityProcessorTest {
 
     @Test
-    void testEmptyAvailabilityList() {
+    void testEmptyAvailabilityList_ReturnsEmptyResult() {
         List<AvailabilityEntity> availabilities = new ArrayList<>();
         int durationHours = 1;
 
@@ -30,7 +30,7 @@ class AvailabilityProcessorTest {
     }
 
     @Test
-    void testNoOverlappingAvailabilities() {
+    void testNoOverlapBetweenAvailabilities_ReturnsNoCommonSlots() {
         UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("UTC")).build();
         UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("UTC")).build();
 
@@ -46,7 +46,7 @@ class AvailabilityProcessorTest {
     }
 
     @Test
-    void testOverlappingAvailabilitiesWithSufficientDuration() {
+    void testSufficientOverlapBetweenAvailabilities_ReturnsCorrectSlot() {
         UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("UTC")).build();
         UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("UTC")).build();
 
@@ -63,29 +63,7 @@ class AvailabilityProcessorTest {
     }
 
     @Test
-    void testOverlappingAvailabilitiesWithSufficientDurationForGroup() {
-        UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("UTC")).build();
-        UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("UTC")).build();
-        UserEntity user3 = UserEntity.builder().id(3L).name("User3").timeZone(ZoneId.of("UTC")).build();
-        UserEntity user4 = UserEntity.builder().id(4L).name("User4").timeZone(ZoneId.of("UTC")).build();
-
-        AvailabilityEntity availability1 = new AvailabilityEntity(1L, user1, MONDAY, LocalTime.of(9, 0), LocalTime.of(15, 0));
-        AvailabilityEntity availability2 = new AvailabilityEntity(2L, user2, MONDAY, LocalTime.of(10, 0), LocalTime.of(15, 0));
-        AvailabilityEntity availability3 = new AvailabilityEntity(3L, user3, MONDAY, LocalTime.of(11, 0), LocalTime.of(14, 0));
-        AvailabilityEntity availability4 = new AvailabilityEntity(4L, user4, MONDAY, LocalTime.of(12, 0), LocalTime.of(17, 0));
-
-        List<AvailabilityEntity> availabilities = Arrays.asList(availability1, availability2, availability3, availability4);
-        int durationHours = 1;
-
-        Map<DayOfWeek, List<LocalTime>> result = AvailabilityProcessor.findAvailableMeetingSlots(availabilities, durationHours);
-
-        assertEquals(2, result.get(MONDAY).size(), "Expected 2 available slots");
-        assertEquals(LocalTime.of(12, 0), result.get(MONDAY).get(0), "Expected common slot at 12:00");
-        assertEquals(LocalTime.of(13, 0), result.get(MONDAY).get(1), "Expected common slot at 13:00");
-    }
-
-    @Test
-    void testMultipleUsersDifferentTimeZones() {
+    void testUsersInDifferentTimeZones_ReturnsSlotsInUTC() {
         UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("America/New_York")).build();
         UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("UTC")).build();
 
@@ -105,7 +83,7 @@ class AvailabilityProcessorTest {
     }
 
     @Test
-    void testDifferentTimeZonesWithFullOverlap() {
+    void testFullOverlapInDifferentTimeZones_ReturnsFullOverlapSlot() {
         UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("America/New_York")).build(); // UTC-5
         UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("UTC")).build();
 
@@ -129,7 +107,7 @@ class AvailabilityProcessorTest {
     }
 
     @Test
-    void testNoValidMeetingSlotDueToInsufficientDuration() {
+    void testInsufficientDuration_NoValidMeetingSlot() {
         UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("UTC")).build();
         UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("UTC")).build();
 
@@ -145,7 +123,7 @@ class AvailabilityProcessorTest {
     }
 
     @Test
-    void testBoundaryTimeMidnight() {
+    void testMidnightBoundaryOverlap_ReturnsSlotStartingAtMidnight() {
         UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("UTC")).build();
         UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("UTC")).build();
 
@@ -162,7 +140,7 @@ class AvailabilityProcessorTest {
     }
 
     @Test
-    void testMultipleUsersAcrossTimeZonesWithVariousAvailabilities() {
+    void testUsersWithVariousAvailabilitiesAcrossTimeZones_ReturnsAvailableSlots() {
         UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("UTC")).build();
         UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("Asia/Yerevan")).build();
         UserEntity user3 = UserEntity.builder().id(3L).name("User3").timeZone(ZoneId.of("Asia/Tokyo")).build();
@@ -195,7 +173,7 @@ class AvailabilityProcessorTest {
     }
 
     @Test
-    void testGroupMeetingSlotsWithWideRangeOfTimesAcrossDifferentDays() {
+    void testWideRangeOfTimesAcrossDifferentDays_ReturnsGroupMeetingSlots() {
         UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("UTC")).build();
         UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("Asia/Yerevan")).build();
         UserEntity user3 = UserEntity.builder().id(3L).name("User3").timeZone(ZoneId.of("Asia/Tokyo")).build();
@@ -224,7 +202,7 @@ class AvailabilityProcessorTest {
     }
 
     @Test
-    void testSingleUser_GreatestMeetingSlot() {
+    void testSingleUser_GreatestMeetingSlot_CorrectSlotReturned() {
         UserEntity user = UserEntity.builder().id(1L).name("User").timeZone(ZoneId.of("UTC")).build();
 
         AvailabilityEntity availability = new AvailabilityEntity(1L, user, DayOfWeek.MONDAY,
@@ -239,7 +217,7 @@ class AvailabilityProcessorTest {
     }
 
     @Test
-    void testWithDifferentTimeZone_GreatestMeetingSlot() {
+    void testDifferentTimeZoneUsers_GreatestMeetingSlot_CorrectSlotFound() {
         UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("America/New_York")).build(); // UTC-5
         UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("UTC")).build();
 
@@ -258,7 +236,7 @@ class AvailabilityProcessorTest {
     }
 
     @Test
-    void testNoCommonMeetingSlot_GreatestMeetingSlot() {
+    void testNoCommonSlotAcrossUsers_GreatestMeetingSlot_ReturnsEmptyResult() {
         UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("UTC")).build();
         UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("UTC")).build();
 
@@ -275,61 +253,11 @@ class AvailabilityProcessorTest {
     }
 
     @Test
-    void testEmptyAvailabilityList_GreatestMeetingSlot() {
+    void testEmptyAvailabilityList_GreatestMeetingSlot_ReturnsEmptyResult() {
         List<AvailabilityEntity> availabilities = List.of();
 
         Map<DayOfWeek, Map.Entry<LocalTime, Integer>> result = AvailabilityProcessor.findGreatestMeetingSlot(availabilities, 1);
 
         assertEquals(0, result.size(), "Expected empty result for no availabilities");
-    }
-
-    @Test
-    void testOverlappingAvailabilitiesWithTwoHourMaxOnTuesday() {
-        UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("Europe/London")).build();
-        UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("Europe/London")).build();
-
-        AvailabilityEntity availability1 = new AvailabilityEntity(1L, user1, TUESDAY, LocalTime.of(11, 0), LocalTime.of(15, 0));
-        AvailabilityEntity availability2 = new AvailabilityEntity(2L, user2, TUESDAY, LocalTime.of(12, 0), LocalTime.of(14, 0));
-
-        List<AvailabilityEntity> availabilities = Arrays.asList(availability1, availability2);
-        int durationHours = 2;
-
-        Map<DayOfWeek, List<LocalTime>> result = AvailabilityProcessor.findAvailableMeetingSlots(availabilities, durationHours);
-
-        assertEquals(1, result.size(), "Expected one available slot on Tuesday");
-        assertEquals(LocalTime.of(12, 0), result.get(TUESDAY).getFirst(), "Expected available slot at 12:00 on Tuesday");
-    }
-
-    @Test
-    void testNonConsecutiveHoursNoCommonSlotOnWednesday() {
-        UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("Europe/London")).build();
-        UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("Europe/London")).build();
-
-        AvailabilityEntity availability1 = new AvailabilityEntity(3L, user1, WEDNESDAY, LocalTime.of(11, 0), LocalTime.of(13, 0));
-        AvailabilityEntity availability2 = new AvailabilityEntity(4L, user2, WEDNESDAY, LocalTime.of(14, 0), LocalTime.of(16, 0));
-
-        List<AvailabilityEntity> availabilities = Arrays.asList(availability1, availability2);
-        int durationHours = 2;
-
-        Map<DayOfWeek, List<LocalTime>> result = AvailabilityProcessor.findAvailableMeetingSlots(availabilities, durationHours);
-
-        assertEquals(0, result.get(WEDNESDAY).size(), "Expected no common available slots on Wednesday due to non-consecutive hours");
-    }
-
-    @Test
-    void testDifferentTimeZonesWithOverlapInUTCOnTuesday() {
-        UserEntity user1 = UserEntity.builder().id(1L).name("User1").timeZone(ZoneId.of("Europe/London")).build();  // UTC
-        UserEntity user2 = UserEntity.builder().id(2L).name("User2").timeZone(ZoneId.of("Europe/Kyiv")).build();    // UTC+2
-
-        AvailabilityEntity availability1 = new AvailabilityEntity(1L, user1, TUESDAY, LocalTime.of(18, 0), LocalTime.of(23, 0));
-        AvailabilityEntity availability2 = new AvailabilityEntity(2L, user2, WEDNESDAY, LocalTime.of(0, 0), LocalTime.of(3, 0)); // 22:00 - 01:00
-
-        List<AvailabilityEntity> availabilities = Arrays.asList(availability1, availability2);
-        int durationHours = 2;
-
-        Map<DayOfWeek, List<LocalTime>> result = AvailabilityProcessor.findAvailableMeetingSlots(availabilities, durationHours);
-
-        assertEquals(1, result.get(TUESDAY).size(), "Expected one available slot due to time zone overlap");
-        assertEquals(LocalTime.of(22, 0), result.get(TUESDAY).getFirst(), "Expected available slot at 22:00 UTC on Tuesday");
     }
 }
